@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   LogOut, Search, Star, GitFork, Sparkles, BookOpen, 
   ChevronRight, Info, RefreshCw, AlertTriangle, CheckCircle2, 
-  FolderGit2, Calendar, Users, BarChart3, Globe, Code
+  FolderGit2, Calendar, Users, BarChart3, Globe, Code,
+  Shield, ShieldAlert, Clock, GitBranch, Lock, Unlock, Loader2
 } from 'lucide-react';
 import { Github } from './icons';
 
@@ -24,6 +25,7 @@ export default function Dashboard({ session, onLogout }) {
   const [selectedRepoName, setSelectedRepoName] = useState('');
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditReport, setAuditReport] = useState(null);
+  const [auditorSubTab, setAuditorSubTab] = useState('overview'); // 'overview', 'commits', 'branches'
 
   // Fetch repositories from API proxy
   const fetchRepos = async () => {
@@ -56,7 +58,9 @@ export default function Dashboard({ session, onLogout }) {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRepos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Compute stats for analytics
@@ -119,6 +123,7 @@ export default function Dashboard({ session, onLogout }) {
     if (!repoName) return;
     setAuditLoading(true);
     setAuditReport(null);
+    setAuditorSubTab('overview');
     
     try {
       const repo = repos.find(r => r.name === repoName);
@@ -151,6 +156,38 @@ export default function Dashboard({ session, onLogout }) {
         }
       } catch (readmeErr) {
         // Readme doesn't exist, which is a key audit insight!
+      }
+
+      // 2. Fetch branches check from GitHub via proxy
+      let branches = [];
+      let defaultBranchProtected = false;
+      try {
+        const branchesRes = await fetch(`/api/github?path=repos/${repo.owner.login}/${repoName}/branches`, {
+          headers
+        });
+        if (branchesRes.ok) {
+          branches = await branchesRes.json();
+          const defaultBranchName = repo.default_branch || 'main';
+          const defaultBranch = branches.find(b => b.name === defaultBranchName);
+          if (defaultBranch) {
+            defaultBranchProtected = !!defaultBranch.protected;
+          }
+        }
+      } catch (branchesErr) {
+        console.error('Branches fetch failed', branchesErr);
+      }
+
+      // 3. Fetch recent commits check from GitHub via proxy
+      let commits = [];
+      try {
+        const commitsRes = await fetch(`/api/github?path=repos/${repo.owner.login}/${repoName}/commits&per_page=15`, {
+          headers
+        });
+        if (commitsRes.ok) {
+          commits = await commitsRes.json();
+        }
+      } catch (commitsErr) {
+        console.error('Commits fetch failed', commitsErr);
       }
 
       // Generate AI Insights from repo metadata
@@ -232,6 +269,82 @@ export default function Dashboard({ session, onLogout }) {
         });
       }
 
+      // Branch findings
+      if (branches.length > 0) {
+        if (!defaultBranchProtected) {
+          findings.push({
+            type: 'danger',
+            category: 'Security',
+            message: `Branch protection is disabled on the default branch "${repo.default_branch || 'main'}". This leaves the codebase vulnerable to force-pushes and accidental deletions.`,
+            fix: 'Navigate to Settings > Branches on GitHub and add a branch protection rule for the default branch.'
+          });
+          score -= 20;
+        } else {
+          findings.push({
+            type: 'success',
+            category: 'Security',
+            message: `Branch protection is active on default branch "${repo.default_branch || 'main'}".`,
+            fix: 'Good governance and secure branching policy maintained.'
+          });
+        }
+
+        if (branches.length > 5) {
+          findings.push({
+            type: 'warning',
+            category: 'Git Standards',
+            message: `High count of active branches (${branches.length} branches). Stale or unmerged remote branches can delay integration cycles.`,
+            fix: 'Clean up stale branches or integrate pull requests to keep the branch count low.'
+          });
+          score -= 5;
+        }
+      }
+
+      // Commit findings
+      let compliancePercentage = 100;
+      if (commits.length > 0) {
+        const conventionalRegex = /^(feat|fix|docs|style|refactor|test|chore|build|ci|perf)(\(.+\))?!?:.+$|^(Initial commit|Merge branch)/i;
+        let conventionalCount = 0;
+        let shortCommitCount = 0;
+
+        commits.forEach(c => {
+          const msg = c.commit?.message || '';
+          if (conventionalRegex.test(msg)) {
+            conventionalCount++;
+          }
+          if (msg.trim().length < 10) {
+            shortCommitCount++;
+          }
+        });
+
+        compliancePercentage = Math.round((conventionalCount / commits.length) * 100);
+
+        if (compliancePercentage < 60) {
+          findings.push({
+            type: 'warning',
+            category: 'Git Standards',
+            message: `Low conventional commit compliance (${compliancePercentage}%). Standard commit messages (e.g. feat:, fix:) enable automated release notes and quality tracking.`,
+            fix: 'Implement commit message linting and establish guidelines for using conventional commit tags.'
+          });
+          score -= 10;
+        } else {
+          findings.push({
+            type: 'success',
+            category: 'Git Standards',
+            message: `Solid commit quality. ${compliancePercentage}% of recent commits follow conventional conventions.`,
+            fix: 'Maintain current developer guidelines for commit formatting.'
+          });
+        }
+
+        if (shortCommitCount > 2) {
+          findings.push({
+            type: 'info',
+            category: 'Git Standards',
+            message: `Detected ${shortCommitCount} recent commits with extremely short descriptions.`,
+            fix: 'Encourage descriptive commit descriptions containing context or ticket references.'
+          });
+        }
+      }
+
       // Add a default positive finding if score is high
       if (score >= 90 && findings.filter(f => f.type === 'success').length === 0) {
         findings.push({
@@ -247,7 +360,11 @@ export default function Dashboard({ session, onLogout }) {
         score: Math.max(score, 10),
         findings,
         updatedAt: new Date().toLocaleTimeString(),
-        description: repo.description || 'No description provided.'
+        description: repo.description || 'No description provided.',
+        branches,
+        commits,
+        defaultBranchProtected,
+        compliancePercentage
       });
 
     } catch (err) {
@@ -561,51 +678,239 @@ export default function Dashboard({ session, onLogout }) {
                   </div>
                 </div>
 
-                {/* Audit Findings */}
-                <h3 style={styles.sectionHeaderTitle}>Audit Findings & Recommendations</h3>
-                <div style={styles.findingsList}>
-                  {auditReport.findings.map((finding, idx) => (
-                    <div 
-                      key={idx} 
-                      style={{
-                        ...styles.findingCard,
-                        borderLeft: `4px solid ${
-                          finding.type === 'danger' ? '#ef4444' : 
-                          finding.type === 'warning' ? '#f59e0b' : 
-                          finding.type === 'success' ? '#10b981' : '#3b82f6'
-                        }`
-                      }}
-                      className="glass-card"
-                    >
-                      <div style={styles.findingHeader}>
-                        <div style={styles.findingTitleRow}>
-                          {finding.type === 'danger' && <AlertTriangle size={16} style={{ color: '#ef4444' }} />}
-                          {finding.type === 'warning' && <AlertTriangle size={16} style={{ color: '#f59e0b' }} />}
-                          {finding.type === 'success' && <CheckCircle2 size={16} style={{ color: '#10b981' }} />}
-                          {finding.type === 'info' && <Info size={16} style={{ color: '#3b82f6' }} />}
-                          <span style={styles.findingCategory}>{finding.category}</span>
+                {/* Sub-tab segment selection */}
+                <div style={styles.subTabNav} className="glass-card">
+                  <button 
+                    style={{
+                      ...styles.subTabBtn,
+                      ...(auditorSubTab === 'overview' ? styles.subTabBtnActive : {})
+                    }}
+                    onClick={() => setAuditorSubTab('overview')}
+                  >
+                    <Info size={14} />
+                    <span>Overview & Findings</span>
+                  </button>
+                  <button 
+                    style={{
+                      ...styles.subTabBtn,
+                      ...(auditorSubTab === 'commits' ? styles.subTabBtnActive : {})
+                    }}
+                    onClick={() => setAuditorSubTab('commits')}
+                  >
+                    <Clock size={14} />
+                    <span>Commit History ({auditReport.commits?.length || 0})</span>
+                  </button>
+                  <button 
+                    style={{
+                      ...styles.subTabBtn,
+                      ...(auditorSubTab === 'branches' ? styles.subTabBtnActive : {})
+                    }}
+                    onClick={() => setAuditorSubTab('branches')}
+                  >
+                    <GitBranch size={14} />
+                    <span>Branch Protection ({auditReport.branches?.length || 0})</span>
+                  </button>
+                </div>
+
+                {/* Sub-tab 1: Findings List */}
+                {auditorSubTab === 'overview' && (
+                  <div>
+                    <h3 style={styles.sectionHeaderTitle}>Audit Findings & Recommendations</h3>
+                    <div style={styles.findingsList}>
+                      {auditReport.findings.map((finding, idx) => (
+                        <div 
+                          key={idx} 
+                          style={{
+                            ...styles.findingCard,
+                            borderLeft: `4px solid ${
+                              finding.type === 'danger' ? '#ef4444' : 
+                              finding.type === 'warning' ? '#f59e0b' : 
+                              finding.type === 'success' ? '#10b981' : '#3b82f6'
+                            }`
+                          }}
+                          className="glass-card"
+                        >
+                          <div style={styles.findingHeader}>
+                            <div style={styles.findingTitleRow}>
+                              {finding.type === 'danger' && <AlertTriangle size={16} style={{ color: '#ef4444' }} />}
+                              {finding.type === 'warning' && <AlertTriangle size={16} style={{ color: '#f59e0b' }} />}
+                              {finding.type === 'success' && <CheckCircle2 size={16} style={{ color: '#10b981' }} />}
+                              {finding.type === 'info' && <Info size={16} style={{ color: '#3b82f6' }} />}
+                              <span style={styles.findingCategory}>{finding.category}</span>
+                            </div>
+                            <span style={{
+                              ...styles.findingBadge,
+                              color: 
+                                finding.type === 'danger' ? '#ef4444' : 
+                                finding.type === 'warning' ? '#f59e0b' : 
+                                finding.type === 'success' ? '#10b981' : '#3b82f6',
+                              backgroundColor:
+                                finding.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 
+                                finding.type === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 
+                                finding.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)'
+                            }}>{finding.type.toUpperCase()}</span>
+                          </div>
+                          <p style={styles.findingMessage}>{finding.message}</p>
+                          
+                          <div style={styles.findingFixBox}>
+                            <span style={styles.fixLabel}>Suggested Action:</span>
+                            <p style={styles.fixText}>{finding.fix}</p>
+                          </div>
                         </div>
-                        <span style={{
-                          ...styles.findingBadge,
-                          color: 
-                            finding.type === 'danger' ? '#ef4444' : 
-                            finding.type === 'warning' ? '#f59e0b' : 
-                            finding.type === 'success' ? '#10b981' : '#3b82f6',
-                          backgroundColor:
-                            finding.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 
-                            finding.type === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 
-                            finding.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)'
-                        }}>{finding.type.toUpperCase()}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-tab 2: Commit History Audit */}
+                {auditorSubTab === 'commits' && (
+                  <div style={styles.commitsContainer} className="glass-card">
+                    <div style={styles.subTabHeader}>
+                      <div>
+                        <h3 style={styles.chartTitle}>Recent Commits Governance Scan</h3>
+                        <p style={styles.chartSubtitle}>Auditing Conventional Commit compliance and syntax quality.</p>
                       </div>
-                      <p style={styles.findingMessage}>{finding.message}</p>
-                      
-                      <div style={styles.findingFixBox}>
-                        <span style={styles.fixLabel}>Suggested Action:</span>
-                        <p style={styles.fixText}>{finding.fix}</p>
+                      <div style={styles.metricsBadgeContainer}>
+                        <span style={styles.complianceRatingBadge}>
+                          Compliance Rate: <strong>{auditReport.compliancePercentage}%</strong>
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    {!auditReport.commits || auditReport.commits.length === 0 ? (
+                      <div style={styles.emptyState}>
+                        <Info size={32} />
+                        <p>No recent commits found for this repository.</p>
+                      </div>
+                    ) : (
+                      <div style={styles.commitsList}>
+                        {auditReport.commits.map((c, idx) => {
+                          const commitInfo = c.commit;
+                          const authorInfo = c.author || {
+                            avatar_url: 'https://github.com/identicons/git.png',
+                            login: commitInfo?.author?.name || 'unknown'
+                          };
+                          const commitAnalysis = analyzeCommitMsg(commitInfo?.message || '');
+                          const dateStr = commitInfo?.author?.date 
+                            ? new Date(commitInfo.author.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            : 'Unknown date';
+
+                          return (
+                            <div key={idx} style={styles.commitItem} className="hover-lift">
+                              <div style={styles.commitAuthorCol}>
+                                <img 
+                                  src={authorInfo.avatar_url} 
+                                  alt={authorInfo.login} 
+                                  style={styles.commitAvatar} 
+                                />
+                                <span style={styles.commitAuthorName}>@{authorInfo.login}</span>
+                              </div>
+
+                              <div style={styles.commitMessageCol}>
+                                <span style={styles.commitMessageText}>{commitInfo?.message?.split('\n')[0]}</span>
+                                <div style={styles.commitMetaRow}>
+                                  <span style={styles.commitDateText}>{dateStr}</span>
+                                  <span style={styles.commitHash}>sha: {c.sha?.substring(0, 7)}</span>
+                                </div>
+                              </div>
+
+                              <div style={styles.commitAuditBadgesCol}>
+                                <span style={{
+                                  ...styles.badgeStyle,
+                                  color: commitAnalysis.isConventional ? '#10b981' : '#f59e0b',
+                                  backgroundColor: commitAnalysis.isConventional ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)'
+                                }}>
+                                  {commitAnalysis.isConventional ? 'Conventional' : 'Non-Standard'}
+                                </span>
+
+                                <span style={{
+                                  ...styles.badgeStyle,
+                                  color: commitAnalysis.quality === 'Standard' ? '#10b981' : commitAnalysis.quality === 'Too Short' ? '#ef4444' : '#3b82f6',
+                                  backgroundColor: commitAnalysis.quality === 'Standard' ? 'rgba(16, 185, 129, 0.1)' : commitAnalysis.quality === 'Too Short' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'
+                                }}>
+                                  {commitAnalysis.quality}
+                                </span>
+
+                                <span style={styles.classificationBadge}>
+                                  {commitAnalysis.classification}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sub-tab 3: Branches Security Check */}
+                {auditorSubTab === 'branches' && (
+                  <div style={styles.branchesContainer} className="glass-card">
+                    <div style={styles.subTabHeader}>
+                      <div>
+                        <h3 style={styles.chartTitle}>Branch Governance & Safety</h3>
+                        <p style={styles.chartSubtitle}>Detecting configuration risks, write policies, and stray dev environments.</p>
+                      </div>
+                    </div>
+
+                    {!auditReport.branches || auditReport.branches.length === 0 ? (
+                      <div style={styles.emptyState}>
+                        <Info size={32} />
+                        <p>No branches found for this repository.</p>
+                      </div>
+                    ) : (
+                      <div style={styles.branchesGrid}>
+                        {auditReport.branches.map((branch, idx) => {
+                          const isDefault = branch.name === (repos.find(r => r.name === auditReport.repoName)?.default_branch || 'main');
+                          return (
+                            <div key={idx} style={styles.branchCard} className="glass-card">
+                              <div style={styles.branchHeader}>
+                                <div style={styles.branchTitleGroup}>
+                                  <GitBranch size={16} style={{ color: isDefault ? 'var(--primary)' : 'var(--text-secondary)' }} />
+                                  <span style={styles.branchNameText}>{branch.name}</span>
+                                </div>
+                                {isDefault && <span style={styles.defaultBranchBadge}>DEFAULT</span>}
+                              </div>
+
+                              <div style={styles.branchDetails}>
+                                <div style={styles.branchMetaRow}>
+                                  <span style={styles.metaLabelText}>Protection Rule:</span>
+                                  {branch.protected ? (
+                                    <span style={styles.protectedLabel}>
+                                      <Lock size={12} />
+                                      Protected
+                                    </span>
+                                  ) : (
+                                    <span style={styles.unprotectedLabel}>
+                                      <Unlock size={12} />
+                                      Unprotected
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div style={styles.branchRecommendationBox}>
+                                  {branch.protected ? (
+                                    <p style={{ color: '#10b981', margin: 0 }}>
+                                      ✓ Direct force pushes blocked. Enforces merge reviews.
+                                    </p>
+                                  ) : isDefault ? (
+                                    <p style={{ color: '#f87171', margin: 0 }}>
+                                      ⚠ CRITICAL: The default branch can be rewritten or force-pushed. Please protect this branch.
+                                    </p>
+                                  ) : (
+                                    <p style={{ color: '#9ca3af', margin: 0 }}>
+                                      Temporary branch. Ensure branch cleanup is performed post pull-request merge.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1408,5 +1713,268 @@ const styles = {
     color: '#9ca3af',
     marginTop: '2px',
     lineHeight: '1.4',
+  },
+  subTabNav: {
+    display: 'flex',
+    gap: '12px',
+    padding: '8px',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    borderRadius: '12px',
+    marginBottom: '20px',
+  },
+  subTabBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 16px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'none',
+    color: '#9ca3af',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.2s ease',
+  },
+  subTabBtnActive: {
+    color: '#ffffff',
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    boxShadow: '0 0 15px rgba(139, 92, 246, 0.1)',
+  },
+  subTabHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    paddingBottom: '16px',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  metricsBadgeContainer: {
+    display: 'flex',
+    gap: '8px',
+  },
+  complianceRatingBadge: {
+    fontSize: '13px',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+    color: '#22d3ee',
+    border: '1px solid rgba(6, 182, 212, 0.15)',
+    fontWeight: '500',
+  },
+  commitsContainer: {
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  commitsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  commitItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '16px',
+    backgroundColor: 'rgba(255, 255, 255, 0.015)',
+    border: '1px solid rgba(255, 255, 255, 0.04)',
+    borderRadius: '12px',
+    gap: '16px',
+    flexWrap: 'wrap',
+  },
+  commitAuthorCol: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    width: '180px',
+    flexShrink: 0,
+  },
+  commitAvatar: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+  },
+  commitAuthorName: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#d1d5db',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  commitMessageCol: {
+    flexGrow: 1,
+    minWidth: '240px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  commitMessageText: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#fff',
+    lineHeight: '1.4',
+  },
+  commitMetaRow: {
+    display: 'flex',
+    gap: '12px',
+    fontSize: '11px',
+    color: '#6b7280',
+  },
+  commitDateText: {
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  commitHash: {
+    fontFamily: 'var(--font-mono)',
+  },
+  commitAuditBadgesCol: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    width: '280px',
+    flexShrink: 0,
+  },
+  badgeStyle: {
+    fontSize: '11px',
+    fontWeight: '600',
+    padding: '4px 8px',
+    borderRadius: '6px',
+  },
+  classificationBadge: {
+    fontSize: '11px',
+    fontWeight: '600',
+    padding: '4px 8px',
+    borderRadius: '6px',
+    color: '#a78bfa',
+    backgroundColor: 'rgba(167, 139, 250, 0.1)',
+    border: '1px solid rgba(167, 139, 250, 0.15)',
+  },
+  branchesContainer: {
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  branchesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '16px',
+  },
+  branchCard: {
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  branchHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  branchTitleGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    overflow: 'hidden',
+  },
+  branchNameText: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#fff',
+    textOverflow: 'ellipsis',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+  },
+  defaultBranchBadge: {
+    fontSize: '9px',
+    fontWeight: '800',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    color: '#c084fc',
+    border: '1px solid rgba(139, 92, 246, 0.3)',
+  },
+  branchDetails: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  branchMetaRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '12px',
+  },
+  metaLabelText: {
+    color: '#6b7280',
+  },
+  protectedLabel: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  unprotectedLabel: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    color: '#f87171',
+    fontWeight: '600',
+  },
+  branchRecommendationBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid rgba(255, 255, 255, 0.04)',
+    borderRadius: '6px',
+    padding: '8px',
+    fontSize: '11px',
+    lineHeight: '1.4',
   }
 };
+
+function analyzeCommitMsg(message) {
+  if (!message) return { classification: 'General Update', quality: 'Standard', isConventional: false };
+  const msg = message.toLowerCase();
+  let classification = 'General Update';
+  let quality = 'Standard';
+  let isConventional = false;
+
+  const conventionalRegex = /^(feat|fix|docs|style|refactor|test|chore|build|ci|perf)(\(.+\))?!?:.+$|^(Initial commit|Merge branch)/i;
+  
+  if (conventionalRegex.test(message)) {
+    isConventional = true;
+    if (msg.startsWith('feat')) classification = 'Feature Addition';
+    else if (msg.startsWith('fix')) classification = 'Bug Fix Patch';
+    else if (msg.startsWith('docs')) classification = 'Documentation';
+    else if (msg.startsWith('style')) classification = 'Code Styling';
+    else if (msg.startsWith('refactor')) classification = 'Refactoring';
+    else if (msg.startsWith('test')) classification = 'Testing Suite';
+    else if (msg.startsWith('chore')) classification = 'Maintenance Task';
+    else if (msg.startsWith('build') || msg.startsWith('ci')) classification = 'CI/CD Build';
+    else if (msg.startsWith('perf')) classification = 'Performance Tuning';
+  } else {
+    if (msg.includes('fix') || msg.includes('bug')) classification = 'Patch Fix';
+    else if (msg.includes('add') || msg.includes('create')) classification = 'Code Addition';
+    else if (msg.includes('update') || msg.includes('modify')) classification = 'Modification';
+    else if (msg.includes('remove') || msg.includes('delete')) classification = 'Cleanup';
+    else if (msg.includes('refactor')) classification = 'Refactoring';
+    else if (msg.includes('doc') || msg.includes('readme')) classification = 'Documentation';
+  }
+
+  if (message.trim().length < 10) {
+    quality = 'Too Short';
+  } else if (message.trim().length > 72) {
+    quality = 'Verbose';
+  }
+
+  return { classification, quality, isConventional };
+}
