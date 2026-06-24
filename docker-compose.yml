@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: business-copilot-db
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-business_copilot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    container_name: business-copilot-backend
+    ports:
+      - '4000:4000'
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-business_copilot}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./packages/backend:/app/packages/backend
+      - /app/packages/backend/node_modules
+
+  ai-service:
+    build:
+      context: ./packages/ai-service
+      dockerfile: Dockerfile
+    container_name: business-copilot-ai-service
+    ports:
+      - '8000:8000'
+    environment:
+      - ENV=development
+    volumes:
+      - ./packages/ai-service:/app
+
+volumes:
+  postgres_data:
