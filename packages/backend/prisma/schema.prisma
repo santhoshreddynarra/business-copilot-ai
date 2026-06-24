@@ -15,6 +15,7 @@ model User {
   roleId       String
   role         Role      @relation(fields: [roleId], references: [id])
   sessions     Session[]
+  documents    Document[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -33,4 +34,44 @@ model Session {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model Document {
+  id             String            @id @default(uuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  title          String
+  description    String?
+  fileType       String            // e.g., 'application/pdf'
+  sizeBytes      Int
+  isProcessing   Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  versions       DocumentVersion[]
+  jobs           UploadJob[]
+
+  @@index([userId])
+}
+
+model DocumentVersion {
+  id           String    @id @default(uuid())
+  documentId   String
+  document     Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version      Int       @default(1)
+  storageKey   String    // Local path or S3 key
+  storageType  String    // 'LOCAL' | 'S3'
+  originalName String
+  createdAt    DateTime  @default(now())
+
+  @@unique([documentId, version])
+}
+
+model UploadJob {
+  id         String    @id @default(uuid())
+  documentId String
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status     String    // 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  error      String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
 }
