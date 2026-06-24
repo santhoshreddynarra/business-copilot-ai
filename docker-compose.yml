@@ -49,6 +49,16 @@ services:
     volumes:
       - ./packages/ai-service:/app
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: business-copilot-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
 volumes:
   postgres_data:
   backend_uploads:
+  qdrant_data:

@@ -14,10 +14,11 @@ model User {
   name         String?
   roleId       String
   role         Role      @relation(fields: [roleId], references: [id])
-  sessions     Session[]
-  documents    Document[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  sessions      Session[]
+  documents     Document[]
+  searchHistory SearchHistory[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Role {
@@ -50,6 +51,7 @@ model Document {
   versions       DocumentVersion[]
   jobs           UploadJob[]
   processingJob  ProcessingJob?
+  vectorSyncJob  VectorSyncJob?
   content        DocumentContent?
   chunks         DocumentChunk[]
 
@@ -107,8 +109,28 @@ model DocumentChunk {
   chunkIndex    Int       // Crucial for ordering and reconstructing context
   metadata      Json      // e.g., { pageNumber, headerContext }
   charLength    Int
+  isVectorized  Boolean   @default(false)
   createdAt     DateTime  @default(now())
 
   @@index([documentId])
   @@index([documentId, chunkIndex])
+}
+
+model VectorSyncJob {
+  id         String    @id @default(uuid())
+  documentId String    @unique
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status     String    // 'PENDING' | 'EMBEDDING' | 'COMPLETED' | 'FAILED'
+  error      String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+}
+
+model SearchHistory {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query      String
+  results    Json      // Storing returned chunk IDs and scores
+  createdAt  DateTime  @default(now())
 }
