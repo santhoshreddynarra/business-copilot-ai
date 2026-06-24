@@ -49,6 +49,9 @@ model Document {
   updatedAt      DateTime          @updatedAt
   versions       DocumentVersion[]
   jobs           UploadJob[]
+  processingJob  ProcessingJob?
+  content        DocumentContent?
+  chunks         DocumentChunk[]
 
   @@index([userId])
 }
@@ -74,4 +77,38 @@ model UploadJob {
   error      String?
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
+}
+
+model ProcessingJob {
+  id         String    @id @default(uuid())
+  documentId String    @unique
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status     String    // 'PENDING' | 'EXTRACTING' | 'CHUNKING' | 'COMPLETED' | 'FAILED'
+  error      String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+}
+
+model DocumentContent {
+  id         String    @id @default(uuid())
+  documentId String    @unique
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  rawText    String    @db.Text
+  cleanText  String    @db.Text
+  wordCount  Int
+  createdAt  DateTime  @default(now())
+}
+
+model DocumentChunk {
+  id            String    @id @default(uuid())
+  documentId    String
+  document      Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content       String    @db.Text
+  chunkIndex    Int       // Crucial for ordering and reconstructing context
+  metadata      Json      // e.g., { pageNumber, headerContext }
+  charLength    Int
+  createdAt     DateTime  @default(now())
+
+  @@index([documentId])
+  @@index([documentId, chunkIndex])
 }
