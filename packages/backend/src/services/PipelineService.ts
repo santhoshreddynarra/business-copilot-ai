@@ -8,7 +8,7 @@ export class PipelineService {
     private storageProvider: StorageProvider
   ) {}
 
-  async processDocument(documentId: string) {
+  async processDocument(documentId: string, userId: string) {
     // 1. Get document details and update job status
     const document = await prisma.document.findUnique({
       where: { id: documentId },
@@ -82,7 +82,21 @@ export class PipelineService {
         });
 
         await tx.document.update({ where: { id: documentId }, data: { isProcessing: false } });
+        
+        // Start VectorSync Job
+        if (extractionResult.chunks.length > 0) {
+          await tx.vectorSyncJob.upsert({
+            where: { documentId },
+            update: { status: 'PENDING', error: null, startedAt: new Date(), finishedAt: null },
+            create: { documentId, status: 'PENDING' }
+          });
+        }
       });
+      
+      // Async trigger vectorization
+      if (extractionResult.chunks.length > 0) {
+        this.triggerVectorization(userId, documentId, extractionResult.chunks).catch(err => console.error(err));
+      }
 
     } catch (error: any) {
       console.error(`Pipeline failed for document ${documentId}:`, error);
@@ -112,5 +126,35 @@ export class PipelineService {
     return prisma.processingJob.findUnique({
       where: { documentId },
     });
+  }
+
+  private async triggerVectorization(userId: string, documentId: string, chunks: any[]) {
+    try {
+      await prisma.vectorSyncJob.update({
+        where: { documentId },
+        data: { status: 'EMBEDDING' }
+      });
+
+      await this.aiClient.vectorize(userId, documentId, chunks);
+
+      await prisma.$transaction(async (tx) => {
+        await tx.vectorSyncJob.update({
+          where: { documentId },
+          data: { status: 'COMPLETED', finishedAt: new Date() }
+        });
+        
+        // Mark chunks as vectorized
+        await tx.documentChunk.updateMany({
+          where: { documentId },
+          data: { isVectorized: true }
+        });
+      });
+    } catch (error: any) {
+      console.error(`Vectorization failed for document ${documentId}:`, error);
+      await prisma.vectorSyncJob.update({
+        where: { documentId },
+        data: { status: 'FAILED', error: error.message || 'Unknown error', finishedAt: new Date() }
+      });
+    }
   }
 }

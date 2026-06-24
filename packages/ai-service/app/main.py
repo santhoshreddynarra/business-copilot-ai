@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.endpoints import extraction, vector
+from app.api.endpoints import extraction, vector, search
 from app.services.qdrant_db import init_qdrant
 
 app = FastAPI(title="Business Copilot AI - Service")
@@ -19,6 +19,7 @@ app.add_middleware(
 
 app.include_router(extraction.router, prefix="/api/v1")
 app.include_router(vector.router, prefix="/api/v1")
+app.include_router(search.router, prefix="/api/v1")
 
 @app.get("/health")
 def health_check():

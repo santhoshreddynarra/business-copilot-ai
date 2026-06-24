@@ -105,7 +105,7 @@ export class DocumentController {
       await documentService.getDocumentDetails(userId, id);
       
       // Start processing in background
-      pipelineService.processDocument(id).catch(err => console.error(err));
+      pipelineService.processDocument(id, userId).catch(err => console.error(err));
 
       res.status(202).json({ data: { message: 'Processing started' } });
     } catch (error: any) {

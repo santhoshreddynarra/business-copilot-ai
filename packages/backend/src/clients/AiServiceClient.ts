@@ -37,4 +37,29 @@ export class AiServiceClient {
 
     return response.data;
   }
+
+  async vectorize(userId: string, documentId: string, chunks: any[]): Promise<any> {
+    const response = await axios.post(
+      `${this.baseUrl}/vectorize`,
+      {
+        user_id: userId,
+        document_id: documentId,
+        chunks: chunks,
+      }
+    );
+    return response.data;
+  }
+
+  async search(query: string, userId: string, documentId?: string, topK: number = 5): Promise<any> {
+    const response = await axios.post(
+      `${this.baseUrl}/search`,
+      {
+        query,
+        user_id: userId,
+        document_id: documentId,
+        top_k: topK,
+      }
+    );
+    return response.data;
+  }
 }
