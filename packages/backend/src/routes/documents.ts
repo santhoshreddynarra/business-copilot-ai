@@ -10,4 +10,9 @@ router.get('/:id', DocumentController.getDocumentDetails);
 router.delete('/:id', DocumentController.deleteDocument);
 router.get('/:id/download', DocumentController.downloadDocument);
 
+router.post('/:id/process', DocumentController.processDocument);
+router.get('/:id/status', DocumentController.getProcessingStatus);
+router.get('/:id/chunks', DocumentController.getDocumentChunks);
+router.get('/:id/content', DocumentController.getDocumentContent);
+
 export default router;
