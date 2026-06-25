@@ -8,32 +8,39 @@ export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState(null);
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
     
     setIsSearching(true);
+    setResults(null);
     
-    // Simulate AI Semantic Search delay
-    setTimeout(() => {
-      setResults([
-        {
-          id: 1,
-          score: 0.92,
-          document: 'Q3_Financial_Report_2026.pdf',
-          content: 'The primary risk factor identified in Q3 stems from supply chain volatility, specifically a 14% increase in lead times for critical hardware components sourced from the APAC region. This has delayed our enterprise server deployments.',
-          page: 12
-        },
-        {
-          id: 2,
-          score: 0.88,
-          document: 'Engineering_Architecture_V2.docx',
-          content: 'To mitigate hardware supply chain delays, the engineering team proposes shifting 30% of our compute workload to AWS spot instances during Q4, reducing our dependency on physical server procurement by early 2027.',
-          page: 4
-        }
-      ]);
+    try {
+      const response = await fetch('http://localhost:4000/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, topK: 5 })
+      });
+      
+      const data = await response.json();
+      
+      if (data.data) {
+        setResults(data.data.map((r, i) => ({
+          id: r.chunkId || i,
+          score: r.score,
+          document: r.source?.documentName || 'Unknown',
+          content: r.content,
+          page: 1 // We could parse this from metadata if available
+        })));
+      } else {
+        setResults([]);
+      }
+    } catch (error) {
+      console.error('Search failed:', error);
+      setResults([]);
+    } finally {
       setIsSearching(false);
-    }, 1500);
+    }
   };
 
   return (

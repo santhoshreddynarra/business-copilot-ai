@@ -1,12 +1,33 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Files, Activity, Database, TrendingUp, Clock, AlertCircle } from 'lucide-react';
 
 export default function DashboardPage() {
+  const [metrics, setMetrics] = useState({
+    totalDocuments: '-',
+    indexedVectors: '-',
+    searchCount: '-'
+  });
+
   const session = {
     user: { name: 'Sarah Executive', role: 'Decision Maker' }
   };
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch('http://localhost:4000/api/search/metrics');
+        const data = await res.json();
+        if (data.data) {
+          setMetrics(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch metrics:', error);
+      }
+    };
+    fetchMetrics();
+  }, []);
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
@@ -19,21 +40,21 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard 
           title="Total Documents" 
-          value="124" 
-          trend="+12 this week" 
+          value={metrics.totalDocuments} 
+          trend="Active" 
           trendUp={true} 
           icon={<Files className="text-blue-500" />} 
         />
         <StatCard 
           title="Indexed Vectors" 
-          value="45,291" 
+          value={metrics.indexedVectors} 
           trend="Synced with Qdrant" 
           trendUp={true} 
           icon={<Database className="text-indigo-500" />} 
         />
         <StatCard 
           title="Copilot Queries" 
-          value="892" 
+          value={metrics.searchCount} 
           trend="Active usage" 
           trendUp={true} 
           icon={<Activity className="text-emerald-500" />} 
