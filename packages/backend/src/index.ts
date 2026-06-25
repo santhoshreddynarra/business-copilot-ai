@@ -4,6 +4,7 @@ import { env } from './config/env';
 import authRoutes from './routes/auth';
 import documentRoutes from './routes/documents';
 import searchRoutes from './routes/search';
+import systemRoutes from './routes/system';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -20,6 +21,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/system', systemRoutes);
 
 // Error handling
 app.use(errorHandler);

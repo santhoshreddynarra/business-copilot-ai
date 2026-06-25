@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Search, 
   LayoutDashboard, 
@@ -16,10 +17,24 @@ import {
 export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock Session for MVP
-  const session = {
-    user: { name: 'Sarah Executive', role: 'Decision Maker' }
+  // Fetch real user session
+  const { data: sessionResponse } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:4000/api/auth/me');
+      if (!res.ok) throw new Error('Failed to fetch user');
+      return res.json();
+    }
+  });
+
+  const session = sessionResponse?.data || { name: 'Guest User', role: 'Guest' };
+  
+  const user = {
+    name: session.name || 'Guest User',
+    role: session.role || 'Guest',
+    initial: (session.name || 'G').charAt(0)
   };
 
   const handleLogout = () => {
@@ -30,8 +45,24 @@ export default function DashboardLayout({ children }) {
     { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { label: 'Knowledge Base', href: '/documents', icon: <Files size={20} /> },
     { label: 'Semantic Search', href: '/search', icon: <Search size={20} /> },
-    { label: 'Copilot Chat', href: '#', icon: <MessageSquare size={20} />, badge: 'Soon' },
+    { label: 'Copilot Chat', href: '#', icon: <MessageSquare size={20} />, badge: 'Beta' },
   ];
+
+  // Global search debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [searchQuery, router]);
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900">
@@ -91,6 +122,9 @@ export default function DashboardLayout({ children }) {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input 
                 type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 placeholder="Ask Copilot anything or search documents..." 
                 className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-transparent rounded-full text-sm focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all"
               />
@@ -104,11 +138,11 @@ export default function DashboardLayout({ children }) {
             </button>
             <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
-                {session?.user?.name?.charAt(0) || 'U'}
+                {user.initial}
               </div>
               <div className="hidden md:block">
-                <p className="text-sm font-medium">{session?.user?.name || 'User'}</p>
-                <p className="text-xs text-slate-500">{session?.user?.role || 'Admin'}</p>
+                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-xs text-slate-500">{user.role}</p>
               </div>
             </div>
           </div>

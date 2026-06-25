@@ -22,11 +22,15 @@ export const metadata = {
   },
 };
 
+import { Providers } from "@/components/providers";
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased bg-white text-slate-900">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

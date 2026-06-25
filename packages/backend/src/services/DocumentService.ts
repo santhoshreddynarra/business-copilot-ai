@@ -60,8 +60,13 @@ export class DocumentService {
       include: {
         versions: {
           orderBy: { version: 'desc' },
-          take: 1, // Only get the latest version info
+          take: 1,
         },
+        jobs: {
+          orderBy: { startedAt: 'desc' },
+          take: 1,
+        },
+        processingJob: true,
       },
     });
   }
