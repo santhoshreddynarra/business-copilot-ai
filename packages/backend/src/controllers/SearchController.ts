@@ -48,4 +48,14 @@ export class SearchController {
       next(error);
     }
   }
+
+  static async getMetrics(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id || 'mock-user-id';
+      const metrics = await searchService.getMetrics(userId);
+      res.status(200).json({ data: metrics });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

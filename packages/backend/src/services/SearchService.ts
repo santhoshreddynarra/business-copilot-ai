@@ -17,17 +17,25 @@ export class SearchService {
     // 2. Execute vector search via AI service
     const searchResponse = await this.aiClient.search(query, userId, documentId, topK);
 
-    // 3. Map Qdrant results back to full chunk text if we didn't store full payload in Qdrant
-    // Since we DO store full payload (content, metadata) in Qdrant, we can just return it.
+    // 3. Format results for frontend
+    const formattedResults = searchResponse.results.map((r: any) => ({
+      documentId: r.payload.document_id,
+      chunkId: r.payload.chunk_id,
+      score: r.score,
+      content: r.payload.content,
+      source: {
+        documentName: r.payload.metadata?.source || 'Unknown Document'
+      }
+    }));
     
     // We update the search history with the returned chunk IDs
-    const chunkIds = searchResponse.results.map((r: any) => r.payload.chunk_id);
+    const chunkIds = formattedResults.map((r: any) => r.chunkId);
     await prisma.searchHistory.update({
       where: { id: history.id },
       data: { results: chunkIds },
     });
 
-    return searchResponse.results;
+    return formattedResults;
   }
 
   async getHistory(userId: string) {
@@ -36,5 +44,17 @@ export class SearchService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+  }
+
+  async getMetrics(userId: string) {
+    const totalDocuments = await prisma.document.count({ where: { userId } });
+    const indexedVectors = await prisma.documentChunk.count({ where: { document: { userId }, isVectorized: true } });
+    const searchCount = await prisma.searchHistory.count({ where: { userId } });
+
+    return {
+      totalDocuments,
+      indexedVectors,
+      searchCount,
+    };
   }
 }

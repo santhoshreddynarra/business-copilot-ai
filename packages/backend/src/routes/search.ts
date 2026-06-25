@@ -5,5 +5,6 @@ const router = Router();
 
 router.post('/', SearchController.searchAll);
 router.get('/history', SearchController.getHistory);
+router.get('/metrics', SearchController.getMetrics);
 
 export default router;
