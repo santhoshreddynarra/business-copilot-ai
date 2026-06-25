@@ -5,6 +5,7 @@ from qdrant_client.http import models
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
 COLLECTION_NAME = "document_chunks"
+VECTOR_SIZE = 384 # all-MiniLM-L6-v2 dimension
 
 client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 
@@ -16,7 +17,7 @@ def init_qdrant():
         client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=models.VectorParams(
-                size=1536, # OpenAI text-embedding-3-small dimension
+                size=VECTOR_SIZE,
                 distance=models.Distance.COSINE
             )
         )
