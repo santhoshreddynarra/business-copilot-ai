@@ -1,16 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
+import { registerSchema, loginSchema, refreshSchema } from '../validators/authValidator';
+import { ZodError } from 'zod';
 
 const authService = new AuthService();
+
+/** Helper: format Zod errors into a readable message */
+function formatZodError(err: ZodError): string {
+  return err.errors.map(e => e.message).join(', ');
+}
 
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password, name } = req.body;
-      if (!email || !password) {
-        return res.status(400).json({ error: { code: 400, message: 'Email and password are required' } });
+      const parsed = registerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: { code: 400, message: formatZodError(parsed.error) } });
       }
-
+      const { email, password, name } = parsed.data;
       const result = await authService.register(email, password, name || email.split('@')[0]);
       res.status(201).json({ data: result });
     } catch (error: any) {
@@ -23,11 +30,11 @@ export class AuthController {
 
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        return res.status(400).json({ error: { code: 400, message: 'Email and password are required' } });
+      const parsed = loginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: { code: 400, message: formatZodError(parsed.error) } });
       }
-
+      const { email, password } = parsed.data;
       const result = await authService.login(email, password);
       res.status(200).json({ data: result });
     } catch (error: any) {
@@ -40,12 +47,11 @@ export class AuthController {
 
   static async refresh(req: Request, res: Response, next: NextFunction) {
     try {
-      const { refreshToken } = req.body;
-      if (!refreshToken) {
-        return res.status(400).json({ error: { code: 400, message: 'Refresh token is required' } });
+      const parsed = refreshSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: { code: 400, message: formatZodError(parsed.error) } });
       }
-
-      const result = await authService.refresh(refreshToken);
+      const result = await authService.refresh(parsed.data.refreshToken);
       res.status(200).json({ data: result });
     } catch (error: any) {
       return res.status(401).json({ error: { code: 401, message: error.message } });
