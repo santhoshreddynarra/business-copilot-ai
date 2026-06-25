@@ -50,7 +50,7 @@ export class DocumentController {
 
   static async getDocumentDetails(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).user?.id || 'mock-user-id';
       
       const document = await documentService.getDocumentDetails(userId, id as string);
@@ -65,7 +65,7 @@ export class DocumentController {
 
   static async deleteDocument(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).user?.id || 'mock-user-id';
 
       await documentService.deleteDocument(userId, id as string);
@@ -80,7 +80,7 @@ export class DocumentController {
 
   static async downloadDocument(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).user?.id || 'mock-user-id';
 
       const { buffer, originalName, mimetype } = await documentService.getDownloadBuffer(userId, id as string);
@@ -98,7 +98,7 @@ export class DocumentController {
 
   static async processDocument(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).user?.id || 'mock-user-id';
 
       // Verify access first
@@ -118,7 +118,7 @@ export class DocumentController {
 
   static async getProcessingStatus(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).user?.id || 'mock-user-id';
       await documentService.getDocumentDetails(userId, id);
 
@@ -131,7 +131,7 @@ export class DocumentController {
 
   static async getDocumentChunks(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).user?.id || 'mock-user-id';
       await documentService.getDocumentDetails(userId, id);
 
@@ -144,7 +144,7 @@ export class DocumentController {
 
   static async getDocumentContent(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const userId = (req as any).user?.id || 'mock-user-id';
       await documentService.getDocumentDetails(userId, id);
 

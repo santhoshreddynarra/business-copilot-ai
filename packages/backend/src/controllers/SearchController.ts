@@ -24,7 +24,7 @@ export class SearchController {
 
   static async searchDocument(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const { query, topK } = req.body;
       const userId = (req as any).user?.id || 'mock-user-id';
 
