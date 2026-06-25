@@ -4,6 +4,7 @@ import React from 'react';
 import { Upload, Files, Activity, Database, TrendingUp, Clock, AlertCircle, Sparkles, BrainCircuit, CheckCircle2, Circle, Server, HardDrive, LayoutTemplate } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { fetchWithAuth } from '../../lib/apiClient';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function DashboardPage() {
   const { data: sessionResponse } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:4000/api/auth/me');
+      const res = await fetchWithAuth('/api/auth/me');
       if (!res.ok) throw new Error('Failed to fetch user');
       return res.json();
     }
@@ -23,7 +24,7 @@ export default function DashboardPage() {
   const { data: metricsResponse, isLoading: metricsLoading } = useQuery({
     queryKey: ['metrics'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:4000/api/search/metrics');
+      const res = await fetchWithAuth('/api/search/metrics');
       if (!res.ok) throw new Error('Failed to fetch metrics');
       return res.json();
     }
@@ -34,7 +35,7 @@ export default function DashboardPage() {
   const { data: healthResponse, isLoading: healthLoading } = useQuery({
     queryKey: ['health'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:4000/api/system/health');
+      const res = await fetchWithAuth('/api/system/health');
       if (!res.ok) throw new Error('Failed to fetch health');
       return res.json();
     },
@@ -47,7 +48,7 @@ export default function DashboardPage() {
   const { data: docsResponse, isLoading: docsLoading } = useQuery({
     queryKey: ['documents'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:4000/api/documents');
+      const res = await fetchWithAuth('/api/documents');
       if (!res.ok) return { data: [] };
       return res.json();
     }
@@ -58,7 +59,7 @@ export default function DashboardPage() {
   const { data: searchResponse, isLoading: searchLoading } = useQuery({
     queryKey: ['searchHistory'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:4000/api/search/history');
+      const res = await fetchWithAuth('/api/search/history');
       if (!res.ok) return { data: [] };
       return res.json();
     }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../components/AuthContext';
 import { 
   Search, 
   LayoutDashboard, 
@@ -18,28 +18,22 @@ export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Fetch real user session
-  const { data: sessionResponse } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('http://localhost:4000/api/auth/me');
-      if (!res.ok) throw new Error('Failed to fetch user');
-      return res.json();
-    }
-  });
-
-  const session = sessionResponse?.data || { name: 'Guest User', role: 'Guest' };
   
+  const { user: session, loading, logout } = useAuth();
+
   const user = {
-    name: session.name || 'Guest User',
-    role: session.role || 'Guest',
-    initial: (session.name || 'G').charAt(0)
+    name: session?.name || 'Guest',
+    role: session?.role?.name || 'Guest',
+    initial: (session?.name || 'G').charAt(0)
   };
 
-  const handleLogout = () => {
-    router.push('/login');
+  const handleLogout = async () => {
+    await logout();
   };
+
+  if (loading) {
+    return <div className="h-screen flex items-center justify-center bg-slate-50">Loading...</div>;
+  }
 
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },

@@ -3,20 +3,27 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BrainCircuit, Search, ShieldCheck, Zap, ArrowRight, Loader2 } from 'lucide-react';
+import { useAuth } from '../../components/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSimulateLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API delay
-    setTimeout(() => {
-      // In a real app, we'd set an HTTP-only cookie or session token here
-      router.push('/dashboard');
-    }, 800);
+    setError('');
+    try {
+      await login(email, password);
+    } catch (err) {
+      setError('Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,7 +103,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <form onSubmit={handleSimulateLogin} className="space-y-4">
+            {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+            <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">Work Email</label>
                 <input 
@@ -106,6 +114,18 @@ export default function LoginPage() {
                   placeholder="you@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <input 
+                  id="password"
+                  type="password" 
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
                 />
               </div>

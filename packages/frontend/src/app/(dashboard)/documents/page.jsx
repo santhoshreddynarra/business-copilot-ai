@@ -3,19 +3,18 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, FileText, Search, Filter, MoreVertical, X, CheckCircle, Clock, AlertCircle, Loader2, FileUp, Trash2, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-const API_BASE = 'http://localhost:4000';
+import { fetchWithAuth } from '../../lib/apiClient';
 
 // ─── API Functions ────────────────────────────────────────────────────────────
 
 async function fetchDocuments() {
-  const res = await fetch(`${API_BASE}/api/documents`);
+  const res = await fetchWithAuth(`/api/documents`);
   if (!res.ok) throw new Error('Failed to fetch documents');
   return res.json();
 }
 
 async function uploadDocument(formData) {
-  const res = await fetch(`${API_BASE}/api/documents/upload`, {
+  const res = await fetchWithAuth(`/api/documents/upload`, {
     method: 'POST',
     body: formData,
     // Note: Do NOT set Content-Type — browser sets it automatically with boundary for multipart
@@ -28,7 +27,7 @@ async function uploadDocument(formData) {
 }
 
 async function triggerProcessing(documentId) {
-  const res = await fetch(`${API_BASE}/api/documents/${documentId}/process`, {
+  const res = await fetchWithAuth(`/api/documents/${documentId}/process`, {
     method: 'POST',
   });
   if (!res.ok) throw new Error('Failed to trigger processing');
@@ -36,7 +35,7 @@ async function triggerProcessing(documentId) {
 }
 
 async function deleteDocument(documentId) {
-  const res = await fetch(`${API_BASE}/api/documents/${documentId}`, {
+  const res = await fetchWithAuth(`/api/documents/${documentId}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete document');

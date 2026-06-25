@@ -16,7 +16,7 @@ export class DocumentController {
     try {
       const file = req.file;
       const { title, description } = req.body;
-      const userId = (req as any).user?.id || 'mock-user-id'; // Fallback until auth is fully integrated
+      const userId = req.user!.id;
 
       if (!file) {
         return res.status(400).json({ error: { code: 400, message: 'No file uploaded' } });
@@ -40,7 +40,7 @@ export class DocumentController {
 
   static async listDocuments(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
       const documents = await documentService.listDocuments(userId);
       res.status(200).json({ data: documents });
     } catch (error) {
@@ -51,7 +51,7 @@ export class DocumentController {
   static async getDocumentDetails(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
       
       const document = await documentService.getDocumentDetails(userId, id as string);
       res.status(200).json({ data: document });
@@ -66,7 +66,7 @@ export class DocumentController {
   static async deleteDocument(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
 
       await documentService.deleteDocument(userId, id as string);
       res.status(200).json({ data: { success: true } });
@@ -81,7 +81,7 @@ export class DocumentController {
   static async downloadDocument(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
 
       const { buffer, originalName, mimetype } = await documentService.getDownloadBuffer(userId, id as string);
 
@@ -99,7 +99,7 @@ export class DocumentController {
   static async processDocument(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
 
       // Verify access first
       await documentService.getDocumentDetails(userId, id);
@@ -119,7 +119,7 @@ export class DocumentController {
   static async getProcessingStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
       await documentService.getDocumentDetails(userId, id);
 
       const status = await pipelineService.getStatus(id);
@@ -132,7 +132,7 @@ export class DocumentController {
   static async getDocumentChunks(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
       await documentService.getDocumentDetails(userId, id);
 
       const chunks = await pipelineService.getChunks(id);
@@ -145,7 +145,7 @@ export class DocumentController {
   static async getDocumentContent(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
       await documentService.getDocumentDetails(userId, id);
 
       const content = await pipelineService.getContent(id);

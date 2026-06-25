@@ -16,9 +16,13 @@ export default function SearchPage() {
     setResults(null);
     
     try {
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('http://localhost:4000/api/search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ query, topK: 5 })
       });
       

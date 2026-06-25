@@ -9,7 +9,7 @@ export class SearchController {
   static async searchAll(req: Request, res: Response, next: NextFunction) {
     try {
       const { query, topK } = req.body;
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
 
       if (!query) {
         return res.status(400).json({ error: { code: 400, message: 'Query is required' } });
@@ -26,7 +26,7 @@ export class SearchController {
     try {
       const id = String(req.params.id);
       const { query, topK } = req.body;
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
 
       if (!query) {
         return res.status(400).json({ error: { code: 400, message: 'Query is required' } });
@@ -41,7 +41,7 @@ export class SearchController {
 
   static async getHistory(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
       const history = await searchService.getHistory(userId);
       res.status(200).json({ data: history });
     } catch (error) {
@@ -51,7 +51,7 @@ export class SearchController {
 
   static async getMetrics(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id || 'mock-user-id';
+      const userId = req.user!.id;
       const metrics = await searchService.getMetrics(userId);
       res.status(200).json({ data: metrics });
     } catch (error) {

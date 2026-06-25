@@ -1,11 +1,13 @@
 import { Router } from 'express';
+import { AuthController } from '../controllers/AuthController';
+import { authenticateJWT } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// TODO: Map to controller methods
-router.post('/register', (req, res) => res.json({ message: 'Register placeholder' }));
-router.post('/login', (req, res) => res.json({ message: 'Login placeholder' }));
-router.post('/logout', (req, res) => res.json({ message: 'Logout placeholder' }));
-router.get('/me', (req, res) => res.json({ data: { id: 'mock-user-id', name: 'Sarah Executive', role: 'Workspace Owner' } }));
+router.post('/register', AuthController.register);
+router.post('/login', AuthController.login);
+router.post('/refresh', AuthController.refresh);
+router.post('/logout', AuthController.logout);
+router.get('/me', authenticateJWT, AuthController.getMe);
 
 export default router;
