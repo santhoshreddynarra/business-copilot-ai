@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { SearchService } from '../services/SearchService';
 import { AiServiceClient } from '../clients/AiServiceClient';
+import { searchSchema } from '../validators/searchValidator';
 
 const aiClient = new AiServiceClient();
 const searchService = new SearchService(aiClient);
@@ -8,13 +9,12 @@ const searchService = new SearchService(aiClient);
 export class SearchController {
   static async searchAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { query, topK } = req.body;
-      const userId = req.user!.id;
-
-      if (!query) {
-        return res.status(400).json({ error: { code: 400, message: 'Query is required' } });
+      const parsed = searchSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: { code: 400, message: parsed.error.errors.map(e => e.message).join(', ') } });
       }
-
+      const { query, topK } = parsed.data;
+      const userId = req.user!.id;
       const results = await searchService.search(userId, query, undefined, topK);
       res.status(200).json({ data: results });
     } catch (error) {
@@ -25,13 +25,12 @@ export class SearchController {
   static async searchDocument(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const { query, topK } = req.body;
-      const userId = req.user!.id;
-
-      if (!query) {
-        return res.status(400).json({ error: { code: 400, message: 'Query is required' } });
+      const parsed = searchSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: { code: 400, message: parsed.error.errors.map(e => e.message).join(', ') } });
       }
-
+      const { query, topK } = parsed.data;
+      const userId = req.user!.id;
       const results = await searchService.search(userId, query, id, topK);
       res.status(200).json({ data: results });
     } catch (error) {
