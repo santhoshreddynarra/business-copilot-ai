@@ -14,7 +14,7 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
         return res.status(403).json({ error: { code: 403, message: 'Forbidden' } });
       }
 
-      req.user = user;
+      (req as any).user = user;
       next();
     });
   } else {
@@ -24,11 +24,12 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
 
 export const requireRole = (roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
+    const userReq = req as any;
+    if (!userReq.user) {
       return res.status(401).json({ error: { code: 401, message: 'Unauthorized' } });
     }
 
-    if (!roles.includes(req.user.role.name)) {
+    if (!roles.includes(userReq.user.role.name)) {
       return res.status(403).json({ error: { code: 403, message: 'Forbidden: Insufficient permissions' } });
     }
 

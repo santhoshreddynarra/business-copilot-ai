@@ -11,10 +11,10 @@ export class SearchController {
     try {
       const parsed = searchSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ error: { code: 400, message: parsed.error.errors.map(e => e.message).join(', ') } });
+        return res.status(400).json({ error: { code: 400, message: parsed.error.issues.map((e: any) => e.message).join(', ') } });
       }
       const { query, topK } = parsed.data;
-      const userId = req.user!.id;
+      const userId = (req as any).user!.id;
       const results = await searchService.search(userId, query, undefined, topK);
       res.status(200).json({ data: results });
     } catch (error) {
@@ -27,10 +27,10 @@ export class SearchController {
       const id = String(req.params.id);
       const parsed = searchSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ error: { code: 400, message: parsed.error.errors.map(e => e.message).join(', ') } });
+        return res.status(400).json({ error: { code: 400, message: parsed.error.issues.map((e: any) => e.message).join(', ') } });
       }
       const { query, topK } = parsed.data;
-      const userId = req.user!.id;
+      const userId = (req as any).user!.id;
       const results = await searchService.search(userId, query, id, topK);
       res.status(200).json({ data: results });
     } catch (error) {
@@ -40,7 +40,7 @@ export class SearchController {
 
   static async getHistory(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = req.user!.id;
+      const userId = (req as any).user!.id;
       const history = await searchService.getHistory(userId);
       res.status(200).json({ data: history });
     } catch (error) {
@@ -50,7 +50,7 @@ export class SearchController {
 
   static async getMetrics(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = req.user!.id;
+      const userId = (req as any).user!.id;
       const metrics = await searchService.getMetrics(userId);
       res.status(200).json({ data: metrics });
     } catch (error) {

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BrainCircuit, Search, ShieldCheck, Zap, ArrowRight, Loader2 } from 'lucide-react';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
-      setError('Invalid credentials');
+      setError(err.message || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,8 @@ export default function LoginPage() {
 
           <div className="space-y-4 mt-8">
             <button 
-              onClick={handleSimulateLogin}
+              type="button"
+              onClick={() => setError('OAuth login coming soon')}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-medium hover:bg-slate-50 transition-all shadow-sm"
             >
@@ -86,7 +87,8 @@ export default function LoginPage() {
             </button>
             
             <button 
-              onClick={handleSimulateLogin}
+              type="button"
+              onClick={() => setError('OAuth login coming soon')}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-medium hover:bg-slate-50 transition-all shadow-sm"
             >

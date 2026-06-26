@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -95,8 +95,8 @@ model DocumentContent {
   id         String    @id @default(uuid())
   documentId String    @unique
   document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  rawText    String    @db.Text
-  cleanText  String    @db.Text
+  rawText    String
+  cleanText  String
   wordCount  Int
   createdAt  DateTime  @default(now())
 }
@@ -105,9 +105,9 @@ model DocumentChunk {
   id            String    @id @default(uuid())
   documentId    String
   document      Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  content       String    @db.Text
+  content       String
   chunkIndex    Int       // Crucial for ordering and reconstructing context
-  metadata      Json      // e.g., { pageNumber, headerContext }
+  metadata      String      // e.g., { pageNumber, headerContext }
   charLength    Int
   isVectorized  Boolean   @default(false)
   createdAt     DateTime  @default(now())
@@ -131,6 +131,6 @@ model SearchHistory {
   userId     String
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   query      String
-  results    Json      // Storing returned chunk IDs and scores
+  results    String      // Storing returned chunk IDs and scores
   createdAt  DateTime  @default(now())
 }

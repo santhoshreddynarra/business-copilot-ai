@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '../../components/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import { 
   Search, 
   LayoutDashboard, 

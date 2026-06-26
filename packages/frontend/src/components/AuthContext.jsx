@@ -41,19 +41,28 @@ export function AuthProvider({ children }) {
   }, [pathname, router]);
 
   const login = async (email, password) => {
-    const res = await fetch('http://localhost:4000/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    
-    if (!res.ok) throw new Error('Login failed');
-    
-    const data = await res.json();
-    localStorage.setItem('accessToken', data.data.accessToken);
-    localStorage.setItem('refreshToken', data.data.refreshToken);
-    setUser(data.data.user);
-    router.push('/dashboard');
+    try {
+      const res = await fetch('http://localhost:4000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error?.message || 'Login failed');
+      }
+      
+      localStorage.setItem('accessToken', data.data.accessToken);
+      localStorage.setItem('refreshToken', data.data.refreshToken);
+      setUser(data.data.user);
+      router.push('/dashboard');
+    } catch (err) {
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        throw new Error('Network error: Unable to reach the server.');
+      }
+      throw err;
+    }
   };
 
   const logout = async () => {

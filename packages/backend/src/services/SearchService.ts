@@ -10,7 +10,7 @@ export class SearchService {
       data: {
         userId,
         query,
-        results: [], // Will update later if needed
+        results: '[]', // Will update later if needed
       },
     });
 
@@ -32,7 +32,7 @@ export class SearchService {
     const chunkIds = formattedResults.map((r: any) => r.chunkId);
     await prisma.searchHistory.update({
       where: { id: history.id },
-      data: { results: chunkIds },
+      data: { results: JSON.stringify(chunkIds) },
     });
 
     return formattedResults;

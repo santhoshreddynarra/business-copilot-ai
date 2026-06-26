@@ -7,7 +7,7 @@ const authService = new AuthService();
 
 /** Helper: format Zod errors into a readable message */
 function formatZodError(err: ZodError): string {
-  return err.errors.map(e => e.message).join(', ');
+  return err.issues.map((e: any) => e.message).join(', ');
 }
 
 export class AuthController {
@@ -72,10 +72,11 @@ export class AuthController {
 
   static async getMe(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!req.user) {
+      const userReq = req as any;
+      if (!userReq.user) {
         return res.status(401).json({ error: { code: 401, message: 'Unauthorized' } });
       }
-      const user = await authService.getMe(req.user.id);
+      const user = await authService.getMe(userReq.user.id);
       res.status(200).json({ data: user });
     } catch (error) {
       next(error);

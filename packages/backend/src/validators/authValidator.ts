@@ -6,12 +6,12 @@ import { z } from 'zod';
  */
 export const registerSchema = z.object({
   email: z
-    .string({ required_error: 'Email is required' })
+    .string({ message: 'Email is required' })
     .email('Must be a valid email address')
     .toLowerCase()
     .trim(),
   password: z
-    .string({ required_error: 'Password is required' })
+    .string({ message: 'Password is required' })
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password must not exceed 128 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
@@ -28,12 +28,12 @@ export const registerSchema = z.object({
  */
 export const loginSchema = z.object({
   email: z
-    .string({ required_error: 'Email is required' })
+    .string({ message: 'Email is required' })
     .email('Must be a valid email address')
     .toLowerCase()
     .trim(),
   password: z
-    .string({ required_error: 'Password is required' })
+    .string({ message: 'Password is required' })
     .min(1, 'Password is required'),
 });
 
@@ -42,7 +42,7 @@ export const loginSchema = z.object({
  */
 export const refreshSchema = z.object({
   refreshToken: z
-    .string({ required_error: 'Refresh token is required' })
+    .string({ message: 'Refresh token is required' })
     .min(1, 'Refresh token is required'),
 });
 
