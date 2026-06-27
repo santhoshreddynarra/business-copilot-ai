@@ -60,6 +60,84 @@ router.get('/status', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * GET /api/system/metrics
+ * Returns aggregated platform usage statistics from the database.
+ * Used by the dashboard to display real-time counts and trends.
+ */
+router.get('/metrics', async (req: Request, res: Response) => {
+  try {
+    const [userCount, documentCount, searchCount, jobCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.document.count(),
+      prisma.searchHistory.count(),
+      prisma.processingJob.count({ where: { status: { in: ['EXTRACTING', 'CHUNKING'] } } }),
+    ]);
+
+    const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
+    const memoryMB = Math.round(process.memoryUsage().rss / 1024 / 1024);
+
+    res.json({
+      data: {
+        users: userCount,
+        documents: documentCount,
+        searches: searchCount,
+        activeJobs: jobCount,
+        uptimeSeconds,
+        memoryMB,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: { code: 500, message: 'Failed to fetch metrics' } });
+  }
+});
+
+/**
+ * GET /api/system/activity
+ * Returns the 10 most recent platform events (uploads + searches) for the
+ * live activity feed on the dashboard.
+ */
+router.get('/activity', async (req: Request, res: Response) => {
+  try {
+    const [recentDocs, recentSearches] = await Promise.all([
+      prisma.document.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, status: true, createdAt: true },
+      }),
+      prisma.searchHistory.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, query: true, createdAt: true },
+      }),
+    ]);
+
+    const events = [
+      ...recentDocs.map((d) => ({
+        id: `doc-${d.id}`,
+        type: 'upload' as const,
+        label: d.name,
+        status: d.status,
+        timestamp: d.createdAt,
+      })),
+      ...recentSearches.map((s) => ({
+        id: `search-${s.id}`,
+        type: 'search' as const,
+        label: s.query,
+        status: 'COMPLETED',
+        timestamp: s.createdAt,
+      })),
+    ]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10);
+
+    res.json({ data: events });
+  } catch (err) {
+    res.status(500).json({ error: { code: 500, message: 'Failed to fetch activity' } });
+  }
+});
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 async function checkDatabase(): Promise<{ status: string; latencyMs: number }> {

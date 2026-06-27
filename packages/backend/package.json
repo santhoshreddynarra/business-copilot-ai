@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "test": "jest"
+    "test": "jest",
+    "seed": "npx ts-node src/scripts/seed.ts",
+    "build": "tsc",
+    "lint": "eslint"
   },
   "keywords": [],
   "author": "",

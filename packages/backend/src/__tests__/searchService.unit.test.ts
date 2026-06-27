@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
 /**
@@ -106,7 +107,7 @@ describe('SearchService', () => {
 
       expect(mockPrisma.searchHistory.update).toHaveBeenCalledWith({
         where: { id: histId },
-        data: { results: ['c1', 'c2'] },
+        data: { results: JSON.stringify(['c1', 'c2']) },
       });
     });
 

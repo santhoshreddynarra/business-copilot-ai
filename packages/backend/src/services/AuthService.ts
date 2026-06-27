@@ -1,7 +1,7 @@
 import { prisma } from '../utils/prisma';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'super-secret-refresh-key';
@@ -90,7 +90,8 @@ export class AuthService {
   }
 
   private async generateTokens(user: any) {
-    const payload = { id: user.id, email: user.email, role: { name: user.role.name } };
+    const jti = randomUUID(); // Unique JWT ID — ensures session.token is always unique
+    const payload = { id: user.id, email: user.email, role: { name: user.role.name }, jti };
     const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
     const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d` });
 
