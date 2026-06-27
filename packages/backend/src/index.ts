@@ -26,6 +26,15 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// Root check
+app.get('/', (req, res) => {
+  res.status(200).json({
+    service: "Business Copilot AI API",
+    status: "healthy",
+    version: "1.0.0"
+  });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);

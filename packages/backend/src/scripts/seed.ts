@@ -96,12 +96,17 @@ async function seed() {
         create: {
           id: `seed-${user.id}-${doc.title.toLowerCase().replace(/ /g, '-')}`.slice(0, 36),
           title: doc.title,
-          fileName: `${doc.title.toLowerCase().replace(/ /g, '_')}.${doc.type.toLowerCase()}`,
-          fileType: doc.type,
-          fileSize: doc.size,
-          status: 'PROCESSED',
+          fileType: doc.type === 'PDF' ? 'application/pdf' : (doc.type === 'DOCX' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/plain'),
+          sizeBytes: doc.size,
           userId: user.id,
-          storagePath: `/uploads/${user.id}/${doc.title}.${doc.type.toLowerCase()}`,
+          versions: {
+            create: {
+              version: 1,
+              storageKey: `/uploads/${user.id}/${doc.title}.${doc.type.toLowerCase()}`,
+              storageType: 'LOCAL',
+              originalName: `${doc.title.toLowerCase().replace(/ /g, '_')}.${doc.type.toLowerCase()}`
+            }
+          }
         },
       });
       docCount++;
