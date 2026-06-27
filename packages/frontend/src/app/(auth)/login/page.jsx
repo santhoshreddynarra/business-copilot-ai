@@ -45,7 +45,7 @@ export default function LoginPage() {
           </h2>
           
           <p className="text-lg text-blue-100 mb-12 max-w-md">
-            Sign in to securely access your organization's knowledge base and start finding insights instantly.
+            Sign in to securely access your organization&apos;s knowledge base and start finding insights instantly.
           </p>
 
           <div className="space-y-6">

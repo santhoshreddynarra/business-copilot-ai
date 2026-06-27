@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, FileText, Search, Filter, MoreVertical, X, CheckCircle, Clock, AlertCircle, Loader2, FileUp, Trash2, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchWithAuth } from '../../lib/apiClient';
+import { fetchWithAuth } from '@/lib/apiClient';
 
 // ─── API Functions ────────────────────────────────────────────────────────────
 
@@ -234,12 +234,12 @@ function UploadModal({ onClose, onSuccess }) {
     setSelectedFile(file);
   };
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     validateAndSetFile(file);
-  }, []);
+  };
 
   const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
@@ -375,7 +375,7 @@ function UploadModal({ onClose, onSuccess }) {
                 <p className="text-sm font-medium text-blue-800">
                   {uploadState === 'uploading' ? 'Uploading file to server...' : 'Triggering AI processing pipeline...'}
                 </p>
-                <p className="text-xs text-blue-600 mt-0.5">Please don't close this window.</p>
+                <p className="text-xs text-blue-600 mt-0.5">Please don&apos;t close this window.</p>
               </div>
             </div>
           )}

@@ -31,17 +31,6 @@ export default function DashboardLayout({ children }) {
     await logout();
   };
 
-  if (loading) {
-    return <div className="h-screen flex items-center justify-center bg-slate-50">Loading...</div>;
-  }
-
-  const navItems = [
-    { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { label: 'Knowledge Base', href: '/documents', icon: <Files size={20} /> },
-    { label: 'Semantic Search', href: '/search', icon: <Search size={20} /> },
-    { label: 'Copilot Chat', href: '#', icon: <MessageSquare size={20} />, badge: 'Beta' },
-  ];
-
   // Global search debounce
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -57,6 +46,17 @@ export default function DashboardLayout({ children }) {
       router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
+
+  if (loading) {
+    return <div className="h-screen flex items-center justify-center bg-slate-50">Loading...</div>;
+  }
+
+  const navItems = [
+    { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
+    { label: 'Knowledge Base', href: '/documents', icon: <Files size={20} /> },
+    { label: 'Semantic Search', href: '/search', icon: <Search size={20} /> },
+    { label: 'Copilot Chat', href: '#', icon: <MessageSquare size={20} />, badge: 'Beta' },
+  ];
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900">

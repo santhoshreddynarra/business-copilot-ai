@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Upload, Files, Activity, Database, TrendingUp, Clock, AlertCircle, Sparkles, BrainCircuit, CheckCircle2, Circle, Server, HardDrive, LayoutTemplate } from 'lucide-react';
+import { Upload, Files, Activity, Database, TrendingUp, Clock, AlertCircle, Sparkles, BrainCircuit, CheckCircle2, Circle, Server, HardDrive, LayoutTemplate, Users, Zap, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { fetchWithAuth } from '../../lib/apiClient';
+import { fetchWithAuth } from '@/lib/apiClient';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -43,8 +43,7 @@ export default function DashboardPage() {
   });
   const health = healthResponse?.data || { backend: 'Offline', database: 'Offline', aiService: 'Offline', documentProcessor: 'Idle' };
 
-  // 4. Recent Documents (Mocked for now since backend doesn't have /api/documents fully implemented or I haven't seen it)
-  // Actually, I saw `GET /api/documents` in routes/documents.ts. I'll fetch it!
+  // 4. Recent Documents
   const { data: docsResponse, isLoading: docsLoading } = useQuery({
     queryKey: ['documents'],
     queryFn: async () => {
@@ -65,6 +64,30 @@ export default function DashboardPage() {
     }
   });
   const recentSearches = searchResponse?.data || [];
+
+  // 6. Platform Metrics (from new /api/system/metrics endpoint)
+  const { data: platformMetrics, isLoading: platformLoading } = useQuery({
+    queryKey: ['platformMetrics'],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/system/metrics');
+      if (!res.ok) return { data: null };
+      return res.json();
+    },
+    refetchInterval: 15000, // Poll every 15s
+  });
+  const sysMetrics = platformMetrics?.data || null;
+
+  // 7. Live Activity Feed (from new /api/system/activity endpoint)
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['activity'],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/system/activity');
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+    refetchInterval: 10000, // Poll every 10s
+  });
+  const activityFeed = activityData?.data || [];
 
   const handleSuggestionClick = (query) => {
     router.push(`/search?q=${encodeURIComponent(query)}`);
@@ -129,6 +152,16 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Platform Metrics Row */}
+      {sysMetrics && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MiniMetric label="Total Users" value={sysMetrics.users} icon={<Users size={16} className="text-violet-500" />} />
+          <MiniMetric label="Documents" value={sysMetrics.documents} icon={<Files size={16} className="text-blue-500" />} />
+          <MiniMetric label="Searches" value={sysMetrics.searches} icon={<Search size={16} className="text-indigo-500" />} />
+          <MiniMetric label="Memory" value={`${sysMetrics.memoryMB} MB`} icon={<HardDrive size={16} className="text-amber-500" />} />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Main Content Area */}
@@ -191,6 +224,46 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Live Activity Feed */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Zap className="text-amber-500" size={18} /> Live Activity
+              </h3>
+              <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Live
+              </span>
+            </div>
+            <div className="divide-y divide-slate-100 flex-1 flex flex-col min-h-[200px]">
+              {activityLoading ? (
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-slate-100 rounded-lg animate-pulse"></div>
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-3 bg-slate-100 rounded w-2/3 animate-pulse"></div>
+                        <div className="h-2 bg-slate-100 rounded w-1/3 animate-pulse"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : activityFeed.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                  <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                    <Activity className="text-slate-300" size={24} />
+                  </div>
+                  <p className="text-slate-500 font-medium">No activity yet.</p>
+                  <p className="text-sm text-slate-400 mt-1">Upload docs or run searches to see events here.</p>
+                </div>
+              ) : (
+                activityFeed.map(event => (
+                  <FeedItem key={event.id} event={event} />
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Right Sidebar Area */}
@@ -240,7 +313,7 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <HealthRow label="Backend API" status={health.backend} />
                 <HealthRow label="AI Service" status={health.aiService} />
-                <HealthRow label="Database (PostgreSQL)" status={health.database} />
+                <HealthRow label="Database (SQLite)" status={health.database} />
                 <HealthRow label="Vector DB (Qdrant)" status={health.aiService} /> {/* Derived from AI Service */}
                 <HealthRow label="Document Processor" status={health.documentProcessor} type="process" />
               </div>
@@ -352,6 +425,37 @@ function ActivityItem({ doc, status, time }) {
         {status === 'Processing' && <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-200/50 shadow-sm flex items-center gap-1"><Activity size={12}/> Processing</span>}
         {status === 'Failed' && <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-red-50 text-red-600 border border-red-200/50 shadow-sm flex items-center gap-1"><AlertCircle size={12}/> Failed</span>}
       </div>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value, icon }) {
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-center justify-between">
+      <div>
+        <p className="text-xs font-medium text-slate-500 mb-1">{label}</p>
+        <p className="font-bold text-slate-900">{value}</p>
+      </div>
+      <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
+        {icon}
+      </div>
+    </div>
+  );
+}
+
+function FeedItem({ event }) {
+  return (
+    <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+          <Activity size={14} className="text-slate-500" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-slate-900">{event.action}</p>
+          <p className="text-xs text-slate-500">{event.details}</p>
+        </div>
+      </div>
+      <span className="text-xs text-slate-400">{event.time}</span>
     </div>
   );
 }

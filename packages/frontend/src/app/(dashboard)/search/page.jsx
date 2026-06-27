@@ -132,7 +132,7 @@ export default function SearchPage() {
                       </div>
                     </div>
                     <p className="text-slate-700 leading-relaxed">
-                      "{result.content}"
+                      &quot;{result.content}&quot;
                     </p>
                     <div className="mt-4 text-xs font-semibold text-slate-400 flex items-center gap-2">
                       <span className="bg-slate-100 px-2 py-1 rounded">Page {result.page}</span>

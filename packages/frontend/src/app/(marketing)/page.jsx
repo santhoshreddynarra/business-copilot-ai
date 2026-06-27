@@ -54,7 +54,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6 leading-tight">
-          Your Company's Brain. <br />
+          Your Company&apos;s Brain. <br />
           <span className="text-blue-600">Instantly Accessible.</span>
         </h1>
         <p className="text-xl text-slate-500 max-w-3xl mx-auto mb-10 leading-relaxed">
