@@ -1,34 +1,51 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { BrainCircuit, Search, ShieldCheck, Zap, ArrowRight, Loader2 } from 'lucide-react';
+import React, { useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { BrainCircuit, Search, ShieldCheck, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 
-function LoginContent() {
+function RegisterContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const searchParams = useSearchParams();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const { login } = useAuth();
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-  useEffect(() => {
-    const errorParam = searchParams?.get('error');
-    if (errorParam === 'oauth_failed') {
-      setError('Google authentication failed.');
-    }
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
     
-    const accessToken = searchParams?.get('accessToken');
-    const refreshToken = searchParams?.get('refreshToken');
-    if (accessToken && refreshToken) {
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      window.location.href = '/dashboard'; // Force reload to populate context
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+      
+      const data = await res.json().catch(() => ({}));
+      
+      if (!res.ok) {
+        throw new Error(data?.error?.message || 'Registration failed');
+      }
+      
+      // Auto login after successful registration
+      await login(email, password);
+    } catch (err) {
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('Backend server is unavailable.');
+      } else {
+        setError(err.message || 'Registration failed');
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [searchParams]);
+  };
 
   const handleGoogleLogin = () => {
     if (!googleClientId) {
@@ -37,19 +54,6 @@ function LoginContent() {
     }
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     window.location.href = `${API_URL}/api/auth/google`;
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      await login(email, password);
-    } catch (err) {
-      setError(err.message || 'Invalid credentials');
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -67,11 +71,11 @@ function LoginContent() {
           </div>
           
           <h2 className="text-4xl font-bold leading-tight mb-6">
-            The intelligent core of your enterprise.
+            Join your organization today.
           </h2>
           
           <p className="text-lg text-blue-100 mb-12 max-w-md">
-            Sign in to securely access your organization&apos;s knowledge base and start finding insights instantly.
+            Create an account to securely access your organization's knowledge base and start finding insights instantly.
           </p>
 
           <div className="space-y-6">
@@ -93,12 +97,12 @@ function LoginContent() {
           {/* Mobile Header */}
           <div className="md:hidden flex flex-col items-center mb-8">
             <BrainCircuit size={40} className="text-blue-600 mb-4" />
-            <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Create an Account</h2>
           </div>
 
           <div className="text-center hidden md:block">
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h2>
-            <p className="mt-2 text-slate-500">Sign in to your secure workspace.</p>
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Create an Account</h2>
+            <p className="mt-2 text-slate-500">Sign up to get started.</p>
           </div>
 
           <div className="space-y-4 mt-8">
@@ -109,20 +113,32 @@ function LoginContent() {
               className={`w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-medium hover:bg-slate-50 transition-all shadow-sm ${!googleClientId ? 'opacity-50' : ''}`}
             >
               <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-              Continue with Google
+              Sign up with Google
             </button>
-
+            
             <div className="relative my-8 py-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-white text-slate-500">Or sign in with email</span>
+                <span className="px-3 bg-white text-slate-500">Or sign up with email</span>
               </div>
             </div>
 
             {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                <input 
+                  id="name"
+                  type="text" 
+                  required
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                />
+              </div>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">Work Email</label>
                 <input 
@@ -152,11 +168,11 @@ function LoginContent() {
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue with Email'}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Account'}
               </button>
               
               <div className="text-center mt-4 text-sm text-slate-600">
-                Don't have an account? <a href="/register" className="text-blue-600 font-medium hover:underline">Sign up</a>
+                Already have an account? <a href="/login" className="text-blue-600 font-medium hover:underline">Log in</a>
               </div>
             </form>
           </div>
@@ -171,10 +187,10 @@ function LoginContent() {
   );
 }
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <LoginContent />
+      <RegisterContent />
     </Suspense>
   );
 }

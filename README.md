@@ -227,6 +227,16 @@ npm test -- --coverage
 
 ## 🤝 Contributing
 
+---
+
+## 🙌 Contributors
+
+- **Santhosh Reddy Narra** – Project Owner
+- **Antigravity AI** – Stabilization and bug fixes (automated contributions)
+- **[Your Name]** – Contributor (add yourself here)
+
+See the full list in [CONTRIBUTORS.md](CONTRIBUTORS.md).
+
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 
 ---

@@ -18,7 +18,8 @@ export function AuthProvider({ children }) {
         const token = localStorage.getItem('accessToken');
         if (!token) throw new Error('No token');
         
-        const res = await fetch('http://localhost:4000/api/auth/me', {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const res = await fetch(`${API_URL}/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -42,7 +43,8 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const res = await fetch('http://localhost:4000/api/auth/login', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -59,7 +61,7 @@ export function AuthProvider({ children }) {
       router.push('/dashboard');
     } catch (err) {
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        throw new Error('Network error: Unable to reach the server.');
+        throw new Error('Backend server is unavailable.');
       }
       throw err;
     }
@@ -68,7 +70,8 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
-      await fetch('http://localhost:4000/api/auth/logout', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      await fetch(`${API_URL}/api/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken })

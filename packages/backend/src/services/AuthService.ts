@@ -43,10 +43,53 @@ export class AuthService {
       include: { role: true },
     });
 
-    if (!user) throw new Error('Invalid credentials');
+    if (!user || !user.passwordHash) throw new Error('Invalid credentials');
 
     const isValid = await bcrypt.compare(passwordRaw, user.passwordHash);
     if (!isValid) throw new Error('Invalid credentials');
+
+    return this.generateTokens(user);
+  }
+
+  async googleLogin(profile: { id: string; email: string; name: string }) {
+    await this.ensureRolesExist();
+
+    const { id: googleId, email, name } = profile;
+
+    let user = await prisma.user.findUnique({
+      where: { googleId },
+      include: { role: true },
+    });
+
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { email },
+        include: { role: true },
+      });
+
+      if (user) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId },
+          include: { role: true },
+        });
+      } else {
+        const userCount = await prisma.user.count();
+        const roleName = userCount === 0 ? 'ADMIN' : 'MANAGER';
+        const role = await prisma.role.findUnique({ where: { name: roleName } });
+        if (!role) throw new Error('Role setup failed');
+
+        user = await prisma.user.create({
+          data: {
+            email,
+            name,
+            googleId,
+            roleId: role.id,
+          },
+          include: { role: true },
+        });
+      }
+    }
 
     return this.generateTokens(user);
   }

@@ -1,0 +1,30 @@
+# Exclude node_modules from all packages — Docker installs its own inside the image
+**/node_modules
+
+# Exclude local build artifacts
+**/.next
+**/.turbo
+**/dist
+**/build
+
+# Exclude git
+.git
+.gitignore
+
+# Exclude local env files (env vars are passed via docker-compose environment:)
+**/.env.local
+**/.env.*.local
+
+# Exclude SQLite dev database (PostgreSQL is used in Docker)
+**/dev.db
+**/dev.db-journal
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+
+# Exclude test artifacts
+**/__tests__
+**/tests
+**/*.test.ts
+**/*.spec.ts
